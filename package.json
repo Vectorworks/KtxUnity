@@ -1,5 +1,5 @@
 {
-  "name": "com.unity.cloud.ktx",
+  "name": "net.vectorworks.ktx",
   "version": "3.4.5",
   "displayName": "KTX for Unity",
   "description": "Load KTX 2.0 and Basis Universal textures at runtime and in the Editor.",
