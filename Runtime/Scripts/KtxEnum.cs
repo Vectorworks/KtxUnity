@@ -1,67 +1,62 @@
-﻿// Copyright (c) 2019-2022 Andreas Atteneder, All Rights Reserved.
+// SPDX-FileCopyrightText: 2023 Unity Technologies and the KTX for Unity authors
+// SPDX-License-Identifier: Apache-2.0
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
 
-//    http://www.apache.org/licenses/LICENSE-2.0
+namespace KtxUnity
+{
 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-namespace KtxUnity {
-
-    public enum KtxClassId {
-        ktxTexture1_c = 1,
-        ktxTexture2_c = 2
+    enum KtxClassId
+    {
+        KtxTexture1 = 1,
+        KtxTexture2 = 2
     }
 
     /// <summary>
     /// KTX error codes (taken from native ktx.h)
     /// </summary>
-    public enum KtxErrorCode {
-        KTX_SUCCESS = 0,         /*!< Operation was successful. */
-        KTX_FILE_DATA_ERROR,     /*!< The data in the file is inconsistent with the spec. */
-        KTX_FILE_ISPIPE,         /*!< The file is a pipe or named pipe. */
-        KTX_FILE_OPEN_FAILED,    /*!< The target file could not be opened. */
-        KTX_FILE_OVERFLOW,       /*!< The operation would exceed the max file size. */
-        KTX_FILE_READ_ERROR,     /*!< An error occurred while reading from the file. */
-        KTX_FILE_SEEK_ERROR,     /*!< An error occurred while seeking in the file. */
-        KTX_FILE_UNEXPECTED_EOF, /*!< File does not have enough data to satisfy request. */
-        KTX_FILE_WRITE_ERROR,    /*!< An error occurred while writing to the file. */
-        KTX_GL_ERROR,            /*!< GL operations resulted in an error. */
-        KTX_INVALID_OPERATION,   /*!< The operation is not allowed in the current state. */
-        KTX_INVALID_VALUE,       /*!< A parameter value was not valid */
-        KTX_NOT_FOUND,           /*!< Requested key was not found */
-        KTX_OUT_OF_MEMORY,       /*!< Not enough memory to complete the operation. */
-        KTX_TRANSCODE_FAILED,    /*!< Transcoding of block compressed texture failed. */
-        KTX_UNKNOWN_FILE_FORMAT, /*!< The file not a KTX file */
-        KTX_UNSUPPORTED_TEXTURE_TYPE, /*!< The KTX file specifies an unsupported texture type. */
-        KTX_UNSUPPORTED_FEATURE,  /*!< Feature not included in in-use library or not yet implemented. */
-        KTX_LIBRARY_NOT_LINKED,  /*!< Library dependency (OpenGL or Vulkan) not linked into application. */
-        KTX_ERROR_MAX_ENUM = KTX_LIBRARY_NOT_LINKED /*!< For safety checks. */
+    enum KtxErrorCode
+    {
+        Success = 0,         /*!< Operation was successful. */
+        FileDataError,     /*!< The data in the file is inconsistent with the spec. */
+        FileIsPipe,         /*!< The file is a pipe or named pipe. */
+        FileOpenFailed,    /*!< The target file could not be opened. */
+        FileOverflow,       /*!< The operation would exceed the max file size. */
+        FileReadError,     /*!< An error occurred while reading from the file. */
+        FileSeekError,     /*!< An error occurred while seeking in the file. */
+        FileUnexpectedEof, /*!< File does not have enough data to satisfy request. */
+        FileWriteError,    /*!< An error occurred while writing to the file. */
+        GLError,            /*!< GL operations resulted in an error. */
+        InvalidOperation,   /*!< The operation is not allowed in the current state. */
+        InvalidValue,       /*!< A parameter value was not valid */
+        NotFound,           /*!< Requested key was not found */
+        OutOfMemory,       /*!< Not enough memory to complete the operation. */
+        TranscodeFailed,    /*!< Transcoding of block compressed texture failed. */
+        UnknownFileFormat, /*!< The file not a KTX file */
+        UnsupportedTextureType, /*!< The KTX file specifies an unsupported texture type. */
+        UnsupportedFeature,  /*!< Feature not included in in-use library or not yet implemented. */
+        LibraryNotLinked,  /*!< Library dependency (OpenGL or Vulkan) not linked into application. */
+        ErrorMaxEnum = LibraryNotLinked /*!< For safety checks. */
     }
 
-    enum KtxSupercmpScheme {
-        KTX_SUPERCOMPRESSION_NONE = 0,  /*!< No supercompression. */
-        KTX_SUPERCOMPRESSION_BASIS = 1, /*!< Basis Universal supercompression. */
-        KTX_SUPERCOMPRESSION_LZMA = 2,  /*!< LZMA supercompression. */
-        KTX_SUPERCOMPRESSION_ZLIB = 3,  /*!< Zlib supercompression. */
-        KTX_SUPERCOMPRESSION_ZSTD = 4,  /*!< ZStd supercompression. */
-        KTX_SUPERCOMPRESSION_BEGIN_RANGE = KTX_SUPERCOMPRESSION_NONE,
-        KTX_SUPERCOMPRESSION_END_RANGE = KTX_SUPERCOMPRESSION_ZSTD,
-        KTX_SUPERCOMPRESSION_BEGIN_VENDOR_RANGE = 0x10000,
-        KTX_SUPERCOMPRESSION_END_VENDOR_RANGE = 0x1ffff,
-        KTX_SUPERCOMPRESSION_BEGIN_RESERVED = 0x20000,
+    enum KtxSuperCompressionScheme
+    {
+        None = 0,  /*!< No supercompression. */
+        Basis = 1, /*!< Basis Universal supercompression. */
+        LZMA = 2,  /*!< LZMA supercompression. */
+        ZLib = 3,  /*!< Zlib supercompression. */
+        ZStd = 4,  /*!< ZStd supercompression. */
+        BeginRange = None,
+        EndRange = ZStd,
+        BeginVendorRange = 0x10000,
+        EndVendorRange = 0x1ffff,
+        BeginReserved = 0x20000,
     }
 
     /// <summary>
     /// Source: KTX-Software, vkformat_enum.h
     /// </summary>
-    enum VkFormat {
+    enum VkFormat
+    {
         Undefined = 0,
         R4G4UNormPack8 = 1,
         R4G4B4A4UNormPack16 = 2,

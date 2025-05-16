@@ -1,18 +1,14 @@
-﻿// Copyright (c) 2019-2022 Andreas Atteneder, All Rights Reserved.
+// SPDX-FileCopyrightText: 2023 Unity Technologies and the KTX for Unity authors
+// SPDX-License-Identifier: Apache-2.0
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//    http://www.apache.org/licenses/LICENSE-2.0
-
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+#if UNITY_STANDALONE || UNITY_WEBGL || UNITY_IOS || UNITY_TVOS || UNITY_VISIONOS || UNITY_ANDROID || UNITY_WSA || UNITY_LUMIN || UNITY_EMBEDDED_LINUX
+#define KTX_PLATFORM_SUPPORTED
+#else
+#define KTX_PLATFORM_NOT_SUPPORTED
+#endif
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -20,16 +16,20 @@ using UnityEngine.Profiling;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
-using IntPtr=System.IntPtr;
+using UnityEngine.Rendering;
+using IntPtr = System.IntPtr;
 
-namespace KtxUnity {
-
-    public class KtxNativeInstance : IMetaData, ILevelInfo
+namespace KtxUnity
+{
+    class KtxNativeInstance : IMetaData, ILevelInfo
     {
-#if UNITY_EDITOR_OSX || UNITY_WEBGL || (UNITY_IOS && !UNITY_EDITOR)
-        public const string INTERFACE_DLL = "__Internal";
-#elif UNITY_ANDROID || UNITY_STANDALONE || UNITY_WSA || UNITY_EDITOR || PLATFORM_LUMIN
-        public const string INTERFACE_DLL = "ktx_unity";
+#if !UNITY_EDITOR && (UNITY_WEBGL || UNITY_IOS || UNITY_TVOS || UNITY_VISIONOS)
+        internal const string ktxLibrary = "__Internal";
+#elif UNITY_EDITOR || UNITY_ANDROID || UNITY_STANDALONE || UNITY_WSA || PLATFORM_LUMIN || UNITY_EMBEDDED_LINUX
+        internal const string ktxLibrary = "ktx_unity";
+#else
+        // Unsupported platform
+        internal const string ktxLibrary = "UnsupportedPlatform";
 #endif
 
         /// <summary>
@@ -38,13 +38,27 @@ namespace KtxUnity {
         /// </summary>
         public const Allocator defaultAllocator = Allocator.Persistent;
 
-        public IntPtr nativeReference;
+        internal static TextureCreationFlags defaultTextureCreationFlags =>
+#if FAST_TEXTURE_CREATION_FLAGS
+            TextureCreationFlags.DontUploadUponCreate | TextureCreationFlags.DontInitializePixels;
+#elif FAST_TEXTURE_CREATION_FLAGS_NON_OPENGL
+            // Up until 2022.3.12 those flags cause a crash with OpenGL (Jira UUM-53142)
+            SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore
+            || SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLES2
+            || SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLES3
+            ? TextureCreationFlags.None
+            : TextureCreationFlags.DontUploadUponCreate | TextureCreationFlags.DontInitializePixels;
+#else
+            TextureCreationFlags.None;
+#endif
 
-        public bool valid => nativeReference != System.IntPtr.Zero;
+        IntPtr m_NativeReference;
 
-        public KtxClassId ktxClass => ktx_get_classId(nativeReference);
+        public bool valid => m_NativeReference != IntPtr.Zero;
 
-        public bool needsTranscoding => ktxTexture2_NeedsTranscoding(nativeReference);
+        public KtxClassId ktxClass => ktx_get_classId(m_NativeReference);
+
+        public bool needsTranscoding => ktxTexture2_NeedsTranscoding(m_NativeReference);
 
         public bool hasAlpha =>
 
@@ -53,42 +67,42 @@ namespace KtxUnity {
             // 2 = RRRA => alpha
             // 3 = RGB => no alpha
             // 4 = RGBA => alpha
-            ktxTexture2_GetNumComponents(nativeReference) % 2 == 0;
+            ktxTexture2_GetNumComponents(m_NativeReference) % 2 == 0;
 
         public bool isPowerOfTwo => LevelInfo.IsPowerOfTwo(baseWidth) && LevelInfo.IsPowerOfTwo(baseHeight);
 
         public bool isMultipleOfFour => LevelInfo.IsMultipleOfFour(baseWidth) && LevelInfo.IsMultipleOfFour(baseHeight);
 
-        public bool isSquare => baseWidth==baseHeight;
+        public bool isSquare => baseWidth == baseHeight;
 
-        public uint baseWidth => ktx_get_baseWidth(nativeReference);
+        public uint baseWidth => ktx_get_baseWidth(m_NativeReference);
 
-        public uint baseHeight => ktx_get_baseHeight(nativeReference);
-        
-        public uint baseDepth => ktx_get_baseDepth(nativeReference);
+        public uint baseHeight => ktx_get_baseHeight(m_NativeReference);
 
-        public uint numLevels => ktx_get_numLevels(nativeReference);
+        public uint baseDepth => ktx_get_baseDepth(m_NativeReference);
 
-        public bool isArray => ktx_get_isArray (nativeReference);
+        public uint numLevels => ktx_get_numLevels(m_NativeReference);
 
-        public bool isCubemap => ktx_get_isCubemap (nativeReference);
+        public bool isArray => ktx_get_isArray(m_NativeReference);
 
-        public bool isCompressed => ktx_get_isCompressed (nativeReference);
+        public bool isCubemap => ktx_get_isCubemap(m_NativeReference);
 
-        public uint numDimensions => ktx_get_numDimensions (nativeReference);
+        public bool isCompressed => ktx_get_isCompressed(m_NativeReference);
 
-        public GraphicsFormat graphicsFormat => GetGraphicsFormat(ktx_get_vkFormat(nativeReference));
+        public uint numDimensions => ktx_get_numDimensions(m_NativeReference);
+
+        public GraphicsFormat graphicsFormat => GetGraphicsFormat(ktx_get_vkFormat(m_NativeReference));
 
         /// <summary>
         /// Specifies the number of array elements. If the texture is not an array texture, numLayers is 0.
         /// </summary>
-        public uint numLayers => ktx_get_numLayers (nativeReference);
+        public uint numLayers => ktx_get_numLayers(m_NativeReference);
 
         /// <summary>
         /// faceCount specifies the number of cubemap faces.
-        /// For cubemaps and cubemap arrays this is 6. For non cubemaps this is 1
+        /// For cube maps and cubemap arrays this is 6. For non cube maps this is 1
         /// </summary>
-        public uint numFaces => ktx_get_numFaces (nativeReference);
+        public uint numFaces => ktx_get_numFaces(m_NativeReference);
 
 #if KTX_UNITY_GPU_UPLOAD
         /// <summary>
@@ -139,7 +153,7 @@ namespace KtxUnity {
         }
 #endif // KTX_UNITY_GPU_UPLOAD
 
-        public TextureOrientation orientation => (TextureOrientation) ktx_get_orientation(nativeReference);
+        public TextureOrientation orientation => (TextureOrientation)ktx_get_orientation(m_NativeReference);
 
         /*
         KtxClassId classId {
@@ -167,7 +181,7 @@ namespace KtxUnity {
                 return ktx_get_numDimensions(nativeReference);
             }
         }
-        
+
         uint numLayers {
             get {
                 return ktx_get_numLayers(nativeReference);
@@ -183,18 +197,19 @@ namespace KtxUnity {
                 return ktx_get_vkFormat(nativeReference);
             }
         }
-        KtxSupercmpScheme supercompressionScheme {
+        KtxSuperCompressionScheme supercompressionScheme {
             get {
                 return ktx_get_supercompressionScheme(nativeReference);
             }
         }
         //*/
 
-        internal unsafe ErrorCode Load(NativeSlice<byte> data) {
+        internal unsafe ErrorCode Load(NativeSlice<byte> data)
+        {
             var src = data.GetUnsafeReadOnlyPtr();
-            KtxErrorCode status;
-            nativeReference = ktx_load_ktx(src, (uint)data.Length, out status);
-            if(status!=KtxErrorCode.KTX_SUCCESS) {
+            m_NativeReference = ktx_load_ktx(src, (uint)data.Length, out var status);
+            if (status != KtxErrorCode.Success)
+            {
 #if DEBUG
                 Debug.LogErrorFormat("KTX error code {0}",status);
 #endif
@@ -206,16 +221,17 @@ namespace KtxUnity {
         public JobHandle LoadBytesJob(
             ref KtxTranscodeJob job,
             TranscodeFormat transF
-        ) {
-            UnityEngine.Profiling.Profiler.BeginSample("Ktx.LoadBytesJob");
+        )
+        {
+            Profiler.BeginSample("Ktx.LoadBytesJob");
 
-            job.result = new NativeArray<KtxErrorCode>(1,defaultAllocator);
-            job.nativeReference = nativeReference;
+            job.result = new NativeArray<KtxErrorCode>(1, defaultAllocator);
+            job.nativeReference = m_NativeReference;
             job.outputFormat = transF;
 
             var jobHandle = job.Schedule();
 
-            UnityEngine.Profiling.Profiler.EndSample();
+            Profiler.EndSample();
             return jobHandle;
         }
 
@@ -225,51 +241,60 @@ namespace KtxUnity {
             uint mipLevel = 0,
             uint faceSlice = 0,
             bool mipChain = true
-            ) 
+            )
         {
-            
+
             Profiler.BeginSample("LoadTextureData");
             var levelCount = numLevels;
             var levelsNeeded = mipChain ? levelCount - mipLevel : 1;
-            var mipmap = levelsNeeded>1;
+            var mipmap = levelsNeeded > 1;
 
             var width = baseWidth;
             var height = baseHeight;
-            
-            if (mipLevel > 0) {
+
+            if (mipLevel > 0)
+            {
                 width = Math.Max(1u, width >> (int)mipLevel);
                 height = Math.Max(1u, height >> (int)mipLevel);
             }
-            
+
+            var flags = defaultTextureCreationFlags;
+            if (mipmap)
+            {
+                flags |= TextureCreationFlags.MipChain;
+            }
             Profiler.BeginSample("CreateTexture2D");
             var texture = new Texture2D(
                 (int)width,
                 (int)height,
                 gf,
-                mipmap ? TextureCreationFlags.MipChain : TextureCreationFlags.None
+                flags
             );
             Profiler.EndSample();
 
-            ktx_get_data(nativeReference,out var data,out var length);
-            
-            if(mipmap) {
+            ktx_get_data(m_NativeReference, out var data, out var length);
+
+            if (mipmap)
+            {
                 Profiler.BeginSample("MipMapCopy");
 
-                for (var level = 0u; level < mipLevel; level++) {
-                    length -= ktx_get_image_size(nativeReference, level);
+                for (var level = 0u; level < mipLevel; level++)
+                {
+                    length -= ktx_get_image_size(m_NativeReference, level);
                 }
-                
-                var reorderedData = new NativeArray<byte>((int)length,Allocator.Temp);
+
+                var reorderedData = new NativeArray<byte>((int)length, Allocator.Temp);
                 var reorderedDataPtr = reorderedData.GetUnsafePtr();
                 var result = ktx_copy_data_levels_reverted(
-                    nativeReference,
+                    m_NativeReference,
                     mipLevel,
                     layer,
                     faceSlice,
                     reorderedDataPtr,
                     (uint)reorderedData.Length
                 );
-                if (result != KtxErrorCode.KTX_SUCCESS) {
+                if (result != KtxErrorCode.Success)
+                {
                     return texture;
                 }
                 Profiler.BeginSample("LoadRawTextureData");
@@ -277,28 +302,41 @@ namespace KtxUnity {
                 Profiler.EndSample();
                 reorderedData.Dispose();
                 Profiler.EndSample();
-            } else {
+            }
+            else
+            {
                 Profiler.BeginSample("LoadRawTextureData");
-                if (mipLevel > 0 || levelCount!=levelsNeeded || layer>0 || faceSlice>0) {
+                if (mipLevel > 0 || levelCount != levelsNeeded || layer > 0 || faceSlice > 0)
+                {
                     var result = ktx_get_image_offset(
-                        nativeReference,
+                        m_NativeReference,
                         mipLevel,
                         layer,
                         faceSlice,
                         out var offset
                         );
-                    if (result != KtxErrorCode.KTX_SUCCESS) {
+                    if (result != KtxErrorCode.Success)
+                    {
                         return null;
                     }
                     data += offset;
-                    length = ktx_get_image_size(nativeReference, mipLevel);
+                    length = ktx_get_image_size(m_NativeReference, mipLevel);
                 }
-                texture.LoadRawTextureData((IntPtr)data,(int)length);
+                texture.LoadRawTextureData((IntPtr)data, (int)length);
                 Profiler.EndSample();
             }
-            // We don't delete the CPU copy at this point. We need to process the texture to create
-            // the alpha-tested mask in app code. After that we discard the CPU copy in app code. -kpresnakov
-            texture.Apply(false, false);
+            texture.Apply(
+                false,
+                // TODO: Expose `makeNoLongerReadable` parameter in API.
+#if UNITY_VISIONOS
+                // PolySpatial visionOS needs to able to access raw texture data in order to do the material/texture
+                // conversion.
+                false
+#else
+                // Free up texture memory by default.
+                true
+#endif
+                );
             Profiler.EndSample();
             return texture;
         }
@@ -306,19 +344,24 @@ namespace KtxUnity {
         /// <summary>
         /// Removes the native KTX object and frees up the memory
         /// </summary>
-        public void Unload() {
-            if(valid) {
-                ktx_unload_ktx(nativeReference);
-                nativeReference = IntPtr.Zero;
+        public void Unload()
+        {
+            if (valid)
+            {
+                ktx_unload_ktx(m_NativeReference);
+                m_NativeReference = IntPtr.Zero;
             }
         }
 
-        ~KtxNativeInstance() {
+        ~KtxNativeInstance()
+        {
             Unload();
         }
 
-        static GraphicsFormat GetGraphicsFormat(VkFormat vkFormat) {
-            switch (vkFormat) {
+        static GraphicsFormat GetGraphicsFormat(VkFormat vkFormat)
+        {
+            switch (vkFormat)
+            {
                 case VkFormat.Astc8X8SrgbBlock: return GraphicsFormat.RGBA_ASTC8X8_SRGB;
                 case VkFormat.Astc8X8UNormBlock: return GraphicsFormat.RGBA_ASTC8X8_UNorm;
                 case VkFormat.B10G11R11UFloatPack32: return GraphicsFormat.B10G11R11_UFloatPack32;
@@ -593,38 +636,56 @@ namespace KtxUnity {
                 case VkFormat.MaxEnum:
                 default:
 #if DEBUG
-                    Debug.LogError(@"You're trying to load an untested/unsupported format. Please enter the correct format conversion in `KtxNativeInstance.cs`, test it and make a pull request. Otherwise please open an issue with a sample file.");
+                    Debug.LogError("You're trying to load an untested/unsupported format. Please enter the correct format conversion in `KtxNativeInstance.cs`, test it and make a pull request. Otherwise please open an issue with a sample file.");
 #endif
                     return GraphicsFormat.None;
             }
         }
 
-        [DllImport(INTERFACE_DLL)]
-        unsafe static extern System.IntPtr ktx_load_ktx(void * data, uint length, out KtxErrorCode status);
+#if !UNITY_EDITOR && KTX_PLATFORM_SUPPORTED
+        [System.Diagnostics.Conditional("FALSE")]
+#endif
+        internal static void CertifySupportedPlatform()
+        {
+#if KTX_PLATFORM_NOT_SUPPORTED
+#if UNITY_EDITOR
+#if !KTX_IGNORE_PLATFORM_NOT_SUPPORTED
+            throw new NotSupportedException("KTX for Unity is not supported on the active build target. This will not work in a build, please switch to a supported platform in the build settings. You can bypass this exception in the Editor by setting the scripting define `KTX_IGNORE_PLATFORM_NOT_SUPPORTED`.");
+#endif // !KTX_IGNORE_PLATFORM_NOT_SUPPORTED
+#else
+            // In a build, always throw the exception.
+            throw new NotSupportedException("KTX for Unity is not supported on this platform.");
+#endif
+#endif // KTX_PLATFORM_NOT_SUPPORTED
+        }
 
-        [DllImport(INTERFACE_DLL)]
-        static extern uint ktx_get_baseWidth ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern unsafe IntPtr ktx_load_ktx(void* data, uint length, out KtxErrorCode status);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern uint ktx_get_baseHeight ( System.IntPtr ktxTexture );
-        
-        [DllImport(INTERFACE_DLL)]
-        static extern uint ktx_get_baseDepth ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern uint ktx_get_baseWidth(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern bool ktxTexture2_NeedsTranscoding( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern uint ktx_get_baseHeight(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern uint ktxTexture2_GetNumComponents( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern uint ktx_get_baseDepth(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        public static extern KtxErrorCode ktxTexture2_TranscodeBasis(System.IntPtr ktxTexture, TranscodeFormat outputFormat, uint transcodeFlags);
+        [DllImport(ktxLibrary)]
+        [return: MarshalAs(UnmanagedType.U1)]
+        static extern bool ktxTexture2_NeedsTranscoding(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        unsafe static extern void ktx_get_data(System.IntPtr ktxTexture, out byte* data, out uint length);
-        
-        [DllImport(INTERFACE_DLL)]
-        unsafe static extern KtxErrorCode ktx_copy_data_levels_reverted(
+        [DllImport(ktxLibrary)]
+        static extern uint ktxTexture2_GetNumComponents(IntPtr ktxTexture);
+
+        [DllImport(ktxLibrary)]
+        public static extern KtxErrorCode ktxTexture2_TranscodeBasis(IntPtr ktxTexture, TranscodeFormat outputFormat, uint transcodeFlags);
+
+        [DllImport(ktxLibrary)]
+        static extern unsafe void ktx_get_data(IntPtr ktxTexture, out byte* data, out uint length);
+
+        [DllImport(ktxLibrary)]
+        static extern unsafe KtxErrorCode ktx_copy_data_levels_reverted(
             IntPtr ktxTexture,
             uint startLevel,
             uint layer,
@@ -633,69 +694,74 @@ namespace KtxUnity {
             uint destinationLength
             );
 
-        [DllImport(INTERFACE_DLL)]
-        static extern void ktx_unload_ktx(System.IntPtr ktxTexture);
+        [DllImport(ktxLibrary)]
+        static extern void ktx_unload_ktx(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern uint ktx_get_numLevels ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern uint ktx_get_numLevels(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern uint ktx_get_orientation ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern uint ktx_get_orientation(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern KtxClassId ktx_get_classId ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern KtxClassId ktx_get_classId(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern bool ktx_get_isArray ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        [return: MarshalAs(UnmanagedType.U1)]
+        static extern bool ktx_get_isArray(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern bool ktx_get_isCubemap ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        [return: MarshalAs(UnmanagedType.U1)]
+        static extern bool ktx_get_isCubemap(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern bool ktx_get_isCompressed ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        [return: MarshalAs(UnmanagedType.U1)]
+        static extern bool ktx_get_isCompressed(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern uint ktx_get_numDimensions ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern uint ktx_get_numDimensions(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern uint ktx_get_numLayers ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern uint ktx_get_numLayers(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern uint ktx_get_numFaces ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern uint ktx_get_numFaces(IntPtr ktxTexture);
 
-        [DllImport(INTERFACE_DLL)]
-        static extern VkFormat ktx_get_vkFormat ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern VkFormat ktx_get_vkFormat(IntPtr ktxTexture);
 
         /*
 
-        [DllImport(INTERFACE_DLL)]
-        static extern KtxSupercmpScheme ktx_get_supercompressionScheme ( System.IntPtr ktxTexture );
+        [DllImport(ktxLibrary)]
+        static extern KtxSuperCompressionScheme ktx_get_supercompressionScheme ( System.IntPtr ktxTexture );
         //*/
-        
-        [DllImport(INTERFACE_DLL)]
+
+        [DllImport(ktxLibrary)]
         static extern KtxErrorCode ktx_get_image_offset(
             IntPtr ktxTexture,
             uint level,
             uint layer,
             uint faceSlice,
-            out int pOffset
+            [MarshalAs(UnmanagedType.SysUInt)]
+            out uint pOffset
             );
-        
-        [DllImport(INTERFACE_DLL)]
+
+        [DllImport(ktxLibrary)]
         static extern uint ktx_get_image_size(
             IntPtr ktxTexture,
             uint level
         );
 
 #if KTX_UNITY_GPU_UPLOAD
-        [DllImport(INTERFACE_DLL)]
+        [DllImport(ktxLibrary)]
         static extern void ktx_enqueue_upload(IntPtr ktx);
-        
-        [DllImport(INTERFACE_DLL)]
+
+        [DllImport(ktxLibrary)]
+        [return: MarshalAs(UnmanagedType.U1)]
         static extern bool ktx_dequeue_upload(IntPtr ktx, out IntPtr texture, out uint error);
 
-        [DllImport(INTERFACE_DLL)]
+        [DllImport(ktxLibrary)]
         static extern IntPtr GetRenderEventFunc();
 #endif
     }
-} 
+}
