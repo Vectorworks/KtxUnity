@@ -1,8 +1,0 @@
-
-*.lib
-*.lib.meta
-
-.DS_Store
-
-# Rider
-**/.idea

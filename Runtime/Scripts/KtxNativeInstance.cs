@@ -333,9 +333,8 @@ namespace KtxUnity
                 // conversion.
                 false
 #else
-                // We don't delete the CPU copy at this point. We need to process the texture to create
-                // the alpha-tested mask in app code. After that we discard the CPU copy in app code. -kpresnakov
-                false
+                // Free up texture memory by default.
+                true
 #endif
                 );
             Profiler.EndSample();
