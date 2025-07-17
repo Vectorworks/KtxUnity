@@ -1,5 +1,48 @@
 # Third party notices
 
-References [Khronos Group](https://www.khronos.org)'s [KTX-Software library](https://github.com/KhronosGroup/KTX-Software) (released under the terms of Apache License 2.0).
+This package contains third-party software components governed by the license(s) indicated below:
 
-References [Binomial LLC](http://www.binomial.info)'s [Basis Universal transcoder](https://github.com/BinomialLLC/basis_universal) (released under the terms of Apache License 2.0).
+### KTX Software
+
+Component Name: KTX Software
+
+License Type: Apache 2.0
+
+Copyright © 2023 Khronos Group
+
+[KTX-Software library](https://github.com/KhronosGroup/KTX-Software)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+
+### Basis Universal Transcoder
+
+Component Name: Basis Universal Transcoder
+
+License Type: Apache 2.0
+
+Copyright © 2022 Khronos Group
+
+[Basis Universal transcoder](https://github.com/BinomialLLC/basis_universal)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.

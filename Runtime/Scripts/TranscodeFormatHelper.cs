@@ -1,16 +1,6 @@
-﻿// Copyright (c) 2019-2022 Andreas Atteneder, All Rights Reserved.
+// SPDX-FileCopyrightText: 2023 Unity Technologies and the KTX for Unity authors
+// SPDX-License-Identifier: Apache-2.0
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//    http://www.apache.org/licenses/LICENSE-2.0
-
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 using System;
 using System.Collections.Generic;
@@ -21,13 +11,15 @@ using System.Text;
 using Enum = System.Enum;
 #endif
 
-namespace KtxUnity {
+namespace KtxUnity
+{
 
     /// <summary>
     /// Mask of texture features
     /// </summary>
     [Flags]
-    enum TextureFeatures {
+    enum TextureFeatures
+    {
         None = 0x0,
 
         /// <summary>
@@ -56,58 +48,63 @@ namespace KtxUnity {
         Linear = 0x10
     }
 
-    public struct TranscodeFormatTuple {
+    struct TranscodeFormatTuple
+    {
         public GraphicsFormat format;
         public TranscodeFormat transcodeFormat;
 
-        public TranscodeFormatTuple(GraphicsFormat format, TranscodeFormat transcodeFormat) {
+        public TranscodeFormatTuple(GraphicsFormat format, TranscodeFormat transcodeFormat)
+        {
             this.format = format;
             this.transcodeFormat = transcodeFormat;
         }
     }
 
-    struct FormatInfo {
+    struct FormatInfo
+    {
         public TextureFeatures features;
-        public TranscodeFormatTuple formats; 
+        public TranscodeFormatTuple formats;
 
-        public FormatInfo(TextureFeatures features, GraphicsFormat format, TranscodeFormat transcodeFormat ) {
+        public FormatInfo(TextureFeatures features, GraphicsFormat format, TranscodeFormat transcodeFormat)
+        {
             this.features = features;
-            this.formats = new TranscodeFormatTuple(format,transcodeFormat);
+            this.formats = new TranscodeFormatTuple(format, transcodeFormat);
         }
     }
 
-    public static class TranscodeFormatHelper
+    static class TranscodeFormatHelper
     {
-        static bool initialized;
-        static Dictionary<TextureFeatures,TranscodeFormatTuple> formatCache;
-        static List<FormatInfo> allFormats;
+        static bool s_Initialized;
+        static Dictionary<TextureFeatures, TranscodeFormatTuple> s_FormatCache;
+        static List<FormatInfo> s_AllFormats;
 
         static void InitInternal()
         {
-            initialized=true;
-            formatCache = new Dictionary<TextureFeatures, TranscodeFormatTuple>();
-            
-            if(allFormats==null) {
+            s_Initialized = true;
+            s_FormatCache = new Dictionary<TextureFeatures, TranscodeFormatTuple>();
 
-                allFormats = new List<FormatInfo>();
-                
+            if (s_AllFormats == null)
+            {
+
+                s_AllFormats = new List<FormatInfo>();
+
                 // Add all formats into the List ordered. First supported match will be used.
                 // This particular order is based on memory size (1st degree)
                 // and a combination of quality and transcode speed (2nd degree)
                 // source <http://richg42.blogspot.com/2018/05/basis-universal-gpu-texture-format.html>
 
                 // Compressed
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare,
                     GraphicsFormat.RGB_ETC2_SRGB,
                     TranscodeFormat.ETC1_RGB));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.RGB_ETC_UNorm,
                     TranscodeFormat.ETC1_RGB));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare,
 #if UNITY_2018_3_OR_NEWER
                     GraphicsFormat.RGBA_DXT1_SRGB,
@@ -116,7 +113,7 @@ namespace KtxUnity {
 #endif
                     TranscodeFormat.BC1_RGB));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare | TextureFeatures.Linear,
 #if UNITY_2018_3_OR_NEWER
                     GraphicsFormat.RGBA_DXT1_UNorm,
@@ -125,102 +122,102 @@ namespace KtxUnity {
 #endif
                     TranscodeFormat.BC1_RGB));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonMultipleOfFour,
                     GraphicsFormat.RGB_PVRTC_4Bpp_SRGB,
                     TranscodeFormat.PVRTC1_4_RGB));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonMultipleOfFour,
                     GraphicsFormat.RGB_PVRTC_4Bpp_UNorm,
                     TranscodeFormat.PVRTC1_4_RGB));
 
                 // Compressed with alpha channel
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonMultipleOfFour | TextureFeatures.NonSquare,
                     GraphicsFormat.RGBA_ASTC4X4_SRGB,
                     TranscodeFormat.ASTC_4x4_RGBA));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonMultipleOfFour | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.RGBA_ASTC4X4_UNorm,
                     TranscodeFormat.ASTC_4x4_RGBA));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare,
                     GraphicsFormat.RGBA_ETC2_SRGB,
                     TranscodeFormat.ETC2_RGBA));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.RGBA_ETC2_UNorm,
                     TranscodeFormat.ETC2_RGBA));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare,
                     GraphicsFormat.RGBA_BC7_SRGB,
                     TranscodeFormat.BC7_RGBA));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.RGBA_BC7_UNorm,
                     TranscodeFormat.BC7_RGBA));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare,
                     GraphicsFormat.RGBA_DXT5_SRGB,
                     TranscodeFormat.BC3_RGBA));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.RGBA_DXT5_UNorm,
                     TranscodeFormat.BC3_RGBA));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonMultipleOfFour,
                     GraphicsFormat.RGBA_PVRTC_4Bpp_SRGB,
                     TranscodeFormat.PVRTC1_4_RGBA));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.Linear | TextureFeatures.NonMultipleOfFour,
                     GraphicsFormat.RGBA_PVRTC_4Bpp_UNorm,
                     TranscodeFormat.PVRTC1_4_RGBA));
 
                 // Uncompressed
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonPowerOfTwo | TextureFeatures.NonMultipleOfFour | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.R5G6B5_UNormPack16,
                     TranscodeFormat.RGB565));
 
                 // Uncompressed with alpha channel
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonMultipleOfFour | TextureFeatures.NonSquare,
                     GraphicsFormat.R8G8B8A8_SRGB, // Also supports SNorm, UInt, SInt
                     TranscodeFormat.RGBA32));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonMultipleOfFour | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.R8G8B8A8_UNorm, // Also supports SNorm, UInt, SInt
                     TranscodeFormat.RGBA32));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonMultipleOfFour | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.R4G4B4A4_UNormPack16,
                     TranscodeFormat.RGBA4444));
-                
+
                 // Need to extend TextureFeatures to request single/dual channel texture formats.
                 // Until then, those formats are at the end of the list
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonPowerOfTwo | TextureFeatures.NonMultipleOfFour | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.B5G6R5_UNormPack16,
                     TranscodeFormat.BGR565));
-                
-                allFormats.Add( new FormatInfo(
+
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.R_EAC_UNorm, // Also supports SNorm
                     TranscodeFormat.ETC2_EAC_R11));
 
-                allFormats.Add( new FormatInfo(
+                s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare | TextureFeatures.Linear,
                     GraphicsFormat.RG_EAC_UNorm, // Also supports SNorm
                     TranscodeFormat.ETC2_EAC_RG11));
@@ -242,8 +239,10 @@ namespace KtxUnity {
             }
         }
 
-        public static void Init() {
-            if(!initialized) {
+        public static void Init()
+        {
+            if (!s_Initialized)
+            {
                 InitInternal();
 #if KTX_VERBOSE
                 CheckTextureSupport();
@@ -251,23 +250,22 @@ namespace KtxUnity {
             }
         }
 
-        public static TranscodeFormatTuple? GetFormatsForImage(
+        internal static TranscodeFormatTuple? GetFormatsForImage(
             IMetaData meta,
             ILevelInfo li,
             bool linear = false
             )
         {
-            TranscodeFormatTuple? formats;
-
-            formats = TranscodeFormatHelper.GetPreferredFormat(
+            var formats = TranscodeFormatHelper.GetPreferredFormat(
                 meta.hasAlpha,
                 li.isPowerOfTwo,
                 li.isMultipleOfFour,
                 li.isSquare,
                 linear
-                );
-            
-            if( !formats.HasValue && meta.hasAlpha ) {
+            );
+
+            if (!formats.HasValue && meta.hasAlpha)
+            {
                 // Fall back to transcode RGB-only to RGBA texture
                 formats = TranscodeFormatHelper.GetPreferredFormat(
                     false,
@@ -279,42 +277,53 @@ namespace KtxUnity {
             }
             return formats;
         }
-        
+
         public static TranscodeFormatTuple? GetPreferredFormat(
             bool hasAlpha,
             bool isPowerOfTwo,
             bool isMultipleOfFour,
             bool isSquare,
             bool isLinear = false
-        ) {
+        )
+        {
             TextureFeatures features = TextureFeatures.None;
-            if(hasAlpha) {
+            if (hasAlpha)
+            {
                 features |= TextureFeatures.AlphaChannel;
             }
-            if(!isPowerOfTwo) {
+            if (!isPowerOfTwo)
+            {
                 features |= TextureFeatures.NonPowerOfTwo;
             }
-            if(!isMultipleOfFour) {
+            if (!isMultipleOfFour)
+            {
                 features |= TextureFeatures.NonMultipleOfFour;
             }
-            if(!isSquare) {
+            if (!isSquare)
+            {
                 features |= TextureFeatures.NonSquare;
             }
-            if(isLinear) {
+            if (isLinear)
+            {
                 features |= TextureFeatures.Linear;
             }
 
-            TranscodeFormatTuple formatTuple;
-            if(formatCache.TryGetValue(features,out formatTuple)) {
+            if (s_FormatCache.TryGetValue(features, out var formatTuple))
+            {
                 return formatTuple;
-            } else {
-                foreach(var formatInfo in allFormats) {
-                    if (!FormatIsMatch(features,formatInfo.features)) {
+            }
+            else
+            {
+                foreach (var formatInfo in s_AllFormats)
+                {
+                    if (!FormatIsMatch(features, formatInfo.features))
+                    {
                         continue;
                     }
-                    var supported = SystemInfo.IsFormatSupported(formatInfo.formats.format ,isLinear ? FormatUsage.Linear : FormatUsage.Sample);
-                    if (supported) {
-                        formatCache[features] = formatInfo.formats;
+                    var supported = IsFormatSupported(formatInfo.formats.format, isLinear);
+                    if (supported)
+                    {
+                        s_FormatCache[features] = formatInfo.formats;
                         return formatInfo.formats;
                     }
                 }
@@ -325,29 +334,143 @@ namespace KtxUnity {
             }
         }
 
-        static bool FormatIsMatch(TextureFeatures required, TextureFeatures provided ) {
+        /// <summary>
+        /// Takes a desired target format and returns a fitting <see cref="TranscodeFormatTuple"/>, if one was found.
+        /// </summary>
+        /// <param name="graphicsFormat">Desired target texture format</param>
+        /// <returns>A fitting <see cref="TranscodeFormatTuple"/>, if one was found. False otherwise.</returns>
+        internal static TranscodeFormatTuple? GetTranscodeFormats(GraphicsFormat graphicsFormat)
+        {
+            TranscodeFormat? tf;
+            switch (graphicsFormat)
+            {
+                case GraphicsFormat.RGB_ETC_UNorm:
+                case GraphicsFormat.RGB_ETC2_SRGB:
+                case GraphicsFormat.RGB_ETC2_UNorm:
+                    tf = TranscodeFormat.ETC1_RGB;
+                    break;
+                case GraphicsFormat.RGBA_DXT1_SRGB:
+                case GraphicsFormat.RGBA_DXT1_UNorm:
+                    tf = TranscodeFormat.BC1_RGB;
+                    break;
+                case GraphicsFormat.RGBA_DXT5_SRGB:
+                case GraphicsFormat.RGBA_DXT5_UNorm:
+                    tf = TranscodeFormat.BC3_RGBA;
+                    break;
+                case GraphicsFormat.RG_BC5_UNorm:
+                case GraphicsFormat.RG_BC5_SNorm:
+                    tf = TranscodeFormat.BC5_RG;
+                    break;
+                case GraphicsFormat.R_BC4_UNorm:
+                case GraphicsFormat.R_BC4_SNorm:
+                    tf = TranscodeFormat.BC4_R;
+                    break;
+                case GraphicsFormat.RGBA_BC7_SRGB:
+                case GraphicsFormat.RGBA_BC7_UNorm:
+                    tf = TranscodeFormat.BC7_RGBA;
+                    break;
+
+                // // RGB formats are untested.
+                // case GraphicsFormat.B8G8R8_SInt:
+                // case GraphicsFormat.B8G8R8_SNorm:
+                // case GraphicsFormat.B8G8R8_SRGB:
+                // case GraphicsFormat.B8G8R8_UInt:
+                // case GraphicsFormat.B8G8R8_UNorm:
+                // case GraphicsFormat.R8G8B8_SInt:
+                // case GraphicsFormat.R8G8B8_SNorm:
+                // case GraphicsFormat.R8G8B8_SRGB:
+                // case GraphicsFormat.R8G8B8_UInt:
+                // case GraphicsFormat.R8G8B8_UNorm:
+                //     tf = TranscodeFormat.RGBA32;
+                //     break;
+
+                case GraphicsFormat.B8G8R8A8_SInt:
+                case GraphicsFormat.B8G8R8A8_SNorm:
+                case GraphicsFormat.B8G8R8A8_SRGB:
+                case GraphicsFormat.B8G8R8A8_UInt:
+                case GraphicsFormat.B8G8R8A8_UNorm:
+                case GraphicsFormat.R8G8B8A8_SInt:
+                case GraphicsFormat.R8G8B8A8_SNorm:
+                case GraphicsFormat.R8G8B8A8_SRGB:
+                case GraphicsFormat.R8G8B8A8_UInt:
+                case GraphicsFormat.R8G8B8A8_UNorm:
+                    tf = TranscodeFormat.RGBA32;
+                    break;
+                case GraphicsFormat.B5G6R5_UNormPack16:
+                case GraphicsFormat.R5G6B5_UNormPack16:
+                    tf = TranscodeFormat.BGR565;
+                    break;
+                case GraphicsFormat.B4G4R4A4_UNormPack16:
+                case GraphicsFormat.R4G4B4A4_UNormPack16:
+                    tf = TranscodeFormat.RGBA4444;
+                    break;
+                case GraphicsFormat.RGBA_ASTC4X4_SRGB:
+#if UNITY_2020_2_OR_NEWER
+                case GraphicsFormat.RGBA_ASTC4X4_UFloat:
+#endif
+                case GraphicsFormat.RGBA_ASTC4X4_UNorm:
+                    tf = TranscodeFormat.ASTC_4x4_RGBA;
+                    break;
+                case GraphicsFormat.RGBA_ETC2_SRGB:
+                case GraphicsFormat.RGBA_ETC2_UNorm:
+                    tf = TranscodeFormat.ETC2_RGBA;
+                    break;
+                case GraphicsFormat.RGBA_PVRTC_4Bpp_SRGB:
+                case GraphicsFormat.RGBA_PVRTC_4Bpp_UNorm:
+                    tf = TranscodeFormat.PVRTC1_4_RGBA;
+                    break;
+                case GraphicsFormat.RGB_PVRTC_4Bpp_SRGB:
+                case GraphicsFormat.RGB_PVRTC_4Bpp_UNorm:
+                    tf = TranscodeFormat.PVRTC1_4_RGB;
+                    break;
+                case GraphicsFormat.R_EAC_SNorm:
+                case GraphicsFormat.R_EAC_UNorm:
+                    tf = TranscodeFormat.ETC2_EAC_R11;
+                    break;
+                case GraphicsFormat.RG_EAC_SNorm:
+                case GraphicsFormat.RG_EAC_UNorm:
+                    tf = TranscodeFormat.ETC2_EAC_RG11;
+                    break;
+                default:
+                    return null;
+            }
+
+            return new TranscodeFormatTuple(graphicsFormat, tf.Value);
+        }
+
+        static bool FormatIsMatch(TextureFeatures required, TextureFeatures provided)
+        {
             return (required & provided) == required;
         }
 
-#if KTX_VERBOSE
-        public static void CheckTextureSupport () {
-            // Dummy call to force logging all supported formats to console
-            List<TranscodeFormatTuple> graphicsFormats;
-            List<KeyValuePair<TextureFormat,TranscodeFormat>> textureFormats;
-            GetSupportedTextureFormats(out graphicsFormats,out textureFormats);
+        internal static bool IsFormatSupported(GraphicsFormat graphicsFormat, bool linear = false)
+        {
+            return SystemInfo.IsFormatSupported(
+                graphicsFormat,
+#if UNITY_2023_2_OR_NEWER
+                linear ? GraphicsFormatUsage.Linear : GraphicsFormatUsage.Sample
+#else
+                linear ? FormatUsage.Linear : FormatUsage.Sample
+#endif
+            );
         }
 
-        public static void GetSupportedTextureFormats (
-            out List<TranscodeFormatTuple> graphicsFormats,
-            out List<KeyValuePair<TextureFormat,TranscodeFormat>> textureFormats
+#if KTX_VERBOSE
+        // ReSharper disable Unity.PerformanceAnalysis
+        static void CheckTextureSupport () {
+            // Dummy call to force logging all supported formats to console
+            GetSupportedTextureFormats(out _);
+        }
+
+        static void GetSupportedTextureFormats (
+            out List<TranscodeFormatTuple> graphicsFormats
         )
         {
             graphicsFormats = new List<TranscodeFormatTuple>();
-            textureFormats = new List<KeyValuePair<TextureFormat,TranscodeFormat>>();
 
             var sb = new StringBuilder();
-            foreach(var formatInfo in allFormats) {
-                var supported = SystemInfo.IsFormatSupported(formatInfo.formats.format,FormatUsage.Sample);
+            foreach(var formatInfo in s_AllFormats) {
+                var supported = IsFormatSupported(formatInfo.formats.format);
                 if(supported) {
                     graphicsFormats.Add(formatInfo.formats);
                 }
@@ -358,32 +481,56 @@ namespace KtxUnity {
 
             sb.Clear();
 
-            GraphicsFormat[] allGfxFormats = (GraphicsFormat[]) Enum.GetValues(typeof(GraphicsFormat));
+            var allGfxFormats = (GraphicsFormat[]) Enum.GetValues(typeof(GraphicsFormat));
             foreach(var format in allGfxFormats) {
-                sb.AppendFormat(
-                    "{0} sample:{1} blend:{2} getpixels:{3} linear:{4} loadstore:{5} aa2:{6} aa4:{7} aa8:{8} readpixels:{9} render:{10} setpixels:{11} sparse:{12}\n"
-                    ,format
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.Sample)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.Blend)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.GetPixels)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.Linear)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.LoadStore)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.MSAA2x)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.MSAA4x)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.MSAA8x)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.ReadPixels)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.Render)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.SetPixels)?"1":"0"
-                    ,SystemInfo.IsFormatSupported(format,FormatUsage.Sparse)?"1":"0"
-                );
+                sb.Append(format).Append(' ');
+                var usages = new[]
+                {
+#if UNITY_2023_2_OR_NEWER
+                    GraphicsFormatUsage.Sample,
+                    GraphicsFormatUsage.Blend,
+                    GraphicsFormatUsage.GetPixels,
+                    GraphicsFormatUsage.Linear,
+                    GraphicsFormatUsage.LoadStore,
+                    GraphicsFormatUsage.MSAA2x,
+                    GraphicsFormatUsage.MSAA4x,
+                    GraphicsFormatUsage.MSAA8x,
+                    GraphicsFormatUsage.ReadPixels,
+                    GraphicsFormatUsage.Render,
+                    GraphicsFormatUsage.SetPixels,
+                    GraphicsFormatUsage.SetPixels32,
+                    GraphicsFormatUsage.Sparse,
+                    GraphicsFormatUsage.StencilSampling,
+#else
+                    FormatUsage.Sample,
+                    FormatUsage.Blend,
+                    FormatUsage.GetPixels,
+                    FormatUsage.Linear,
+                    FormatUsage.LoadStore,
+                    FormatUsage.MSAA2x,
+                    FormatUsage.MSAA4x,
+                    FormatUsage.MSAA8x,
+                    FormatUsage.ReadPixels,
+                    FormatUsage.Render,
+                    FormatUsage.SetPixels,
+                    FormatUsage.SetPixels32,
+                    FormatUsage.Sparse,
+                    FormatUsage.StencilSampling,
+#endif
+                };
+                foreach (var usage in usages)
+                {
+                    sb
+                        .Append(usage)
+                        .Append(':')
+                        .Append(SystemInfo.IsFormatSupported(format, usage) ? "1" : "0")
+                        .Append(' ');
+                }
+
+                sb.Append('\n');
             }
 
             Debug.Log(sb.ToString());
-        }
-
-        [System.Diagnostics.Conditional("KTX_VERBOSE")]
-        static void Log(string format, params object[] args) {
-            Debug.LogFormat(format,args);
         }
 #endif
     }

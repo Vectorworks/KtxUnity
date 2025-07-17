@@ -1,31 +1,42 @@
-// Copyright (c) 2019-2022 Andreas Atteneder, All Rights Reserved.
+// SPDX-FileCopyrightText: 2023 Unity Technologies and the KTX for Unity authors
+// SPDX-License-Identifier: Apache-2.0
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//    http://www.apache.org/licenses/LICENSE-2.0
-
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 using System;
+using System.IO;
 using UnityEngine;
+using UnityEngine.Profiling;
 #if UNITY_2020_2_OR_NEWER
 using UnityEditor.AssetImporters;
 #else
 using UnityEditor.Experimental.AssetImporters;
 #endif
 
-namespace KtxUnity
+namespace KtxUnity.Editor
 {
-    [ScriptedImporter(0, new []{ ".basis" })]
-    public class BasisImporter : TextureImporter {
-        protected override TextureBase CreateTextureBase() {
-            return new BasisUniversalTexture();
+    [ScriptedImporter(0, new[] { ".basis" })]
+    class BasisImporter : TextureImporter
+    {
+        protected override TextureResult LoadTexture()
+        {
+            Profiler.BeginSample("LoadTexture");
+            var texture = new BasisUniversalTexture();
+            var result = AsyncHelpers.RunSync(() =>
+            {
+                using (var alloc = new ManagedNativeArray(File.ReadAllBytes(assetPath)))
+                {
+                    return texture.LoadFromBytesInternal(
+                        alloc.nativeArray,
+                        linear,
+                        layer,
+                        faceSlice,
+                        levelLowerLimit,
+                        importLevelChain
+                    );
+                }
+            });
+            Profiler.EndSample();
+            return result;
         }
     }
 }

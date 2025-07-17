@@ -1,85 +1,73 @@
-﻿// Copyright (c) 2019-2022 Andreas Atteneder, All Rights Reserved.
+// SPDX-FileCopyrightText: 2023 Unity Technologies and the KTX for Unity authors
+// SPDX-License-Identifier: Apache-2.0
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
 
-//    http://www.apache.org/licenses/LICENSE-2.0
-
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-namespace KtxUnity {
-
-    public interface IMetaData {
-        bool hasAlpha {get;}
-    }
-
-    public interface ILevelInfo {
-        bool isPowerOfTwo {get;}
-        bool isMultipleOfFour {get;}
-        bool isSquare {get;}
-    }
-
-    public class MetaData : IMetaData
+namespace KtxUnity
+{
+    interface IMetaData
     {
-        public bool hasAlpha {get;set;}
+        bool hasAlpha { get; }
+    }
+
+    interface ILevelInfo
+    {
+        bool isPowerOfTwo { get; }
+        bool isMultipleOfFour { get; }
+        bool isSquare { get; }
+    }
+
+    class MetaData : IMetaData
+    {
+        public bool hasAlpha { get; set; }
 
         public ImageInfo[] images;
 
-        public void GetSize(out uint width, out uint height, uint imageIndex=0, uint levelIndex=0) {
+        public void GetSize(out uint width, out uint height, uint imageIndex = 0, uint levelIndex = 0)
+        {
             var level = images[imageIndex].levels[levelIndex];
             width = level.width;
             height = level.height;
         }
 
-        public override string ToString() {
-            return string.Format("BU images:{0} A:{1}",images.Length,hasAlpha);
+        public override string ToString()
+        {
+            return $"BU images:{images.Length} A:{hasAlpha}";
         }
     }
 
-    public class ImageInfo {
+    class ImageInfo
+    {
         public LevelInfo[] levels;
-        public override string ToString() {
-            return string.Format("Image levels:{0}",levels.Length);
+        public override string ToString()
+        {
+            return $"Image levels:{levels.Length}";
         }
     }
 
-    public class LevelInfo : ILevelInfo {
+    class LevelInfo : ILevelInfo
+    {
         public uint width;
         public uint height;
 
-        public static bool IsPowerOfTwo(uint i) {
-            return (i&(i-1))==0;
+        public static bool IsPowerOfTwo(uint i)
+        {
+            return (i & (i - 1)) == 0;
         }
 
-        public static bool IsMultipleOfFour(uint i) {
-            return (i&0x3)==0;
+        public static bool IsMultipleOfFour(uint i)
+        {
+            return (i & 0x3) == 0;
         }
 
-        public bool isPowerOfTwo {
-            get {
-                return IsPowerOfTwo(width) && IsPowerOfTwo(height);
-            }
-        }
+        public bool isPowerOfTwo => IsPowerOfTwo(width) && IsPowerOfTwo(height);
 
-        public bool isMultipleOfFour {
-            get {
-                return IsMultipleOfFour(width) && IsMultipleOfFour(height);
-            }
-        }
+        public bool isMultipleOfFour => IsMultipleOfFour(width) && IsMultipleOfFour(height);
 
-        public bool isSquare {
-            get {
-                return width==height;
-            }
-        }
+        public bool isSquare => width == height;
 
-        public override string ToString() {
-            return string.Format("Level size {0} x {1}", width, height);
+        public override string ToString()
+        {
+            return $"Level size {width} x {height}";
         }
     }
 }
