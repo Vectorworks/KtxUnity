@@ -322,10 +322,11 @@ namespace KtxUnity
                 texture.LoadRawTextureData((IntPtr)data, (int)length);
                 Profiler.EndSample();
             }
-            texture.Apply(
-                false,
-                !readable
-                );
+			
+            // We don't delete the CPU copy at this point. We need to process the texture to create
+            // the alpha-tested mask in app code. After that we discard the CPU copy in app code. -kpresnakov
+            texture.Apply(false, false);
+			
             Profiler.EndSample();
             return ErrorCode.Success;
 
