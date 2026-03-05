@@ -4,6 +4,91 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.3] - 2026-03-04
+
+### Changed
+- Ensured compatibility with [Fast Enter Play Mode](https://unity.com/blog/engine-platform/enter-play-mode-faster-in-unity-2019-3).
+
+## [3.6.2] - 2025-12-09
+
+### Changed
+- (Test) Bundled necessary test textures, including its sources.
+
+### Fixed
+- Error codes are returned consistently when trying to load an invalid face/slice/layer/level.
+- Improved forwarding `libktx` internal error codes to give more informative feedback as to what went wrong.
+- (CI) Tests succeed without internet connection.
+
+## [3.6.1] - 2025-11-13
+
+### Added
+- (Test) PVRTC transcoding test.
+
+### Changed
+- Increased minimum required Unity 2022 xLTS (2022.3.67f2).
+
+### Fixed
+- Removed compiler warnings about PVRTC texture formats being deprecated in Unity 6.1 and newer.
+
+### Removed
+- Magic Leap 1 (Lumin) support.
+- WebAssembly 2021 binary.
+
+## [3.6.0] - 2025-10-29
+
+### Added
+- [LoadTexture2D](xref:KtxUnity.TextureBase.LoadTexture2D(System.Boolean,System.Boolean)) overload that lets you create readable textures.
+- Performance tests for [LoadFromStreamingAssets](xref:KtxUnity.TextureBase.LoadFromStreamingAssets*)
+- [EditorConfig](https://editorconfig.org/) for keeping a consistent code-style.
+
+### Changed
+- Updated Linux binary to version 1.5.2
+- (CI) Code format check is performed by dotnet format now.
+- (Documentation) Updated supported platforms
+
+### Fixed
+- Linux binary is now compatible with Ubuntu 18.04.
+- (CI) Code coverage is measured correctly during/after pull requrests.
+- (CI) Apply code format checks on tests package as well.
+- (CI) When fetching Unity versions, properly fall back to alpha if beta was not found.
+- (Documentation) Required Unity version in [Get started](./Documentation~/get-started.md).
+
+### Removed
+- (CI) SonarQube scan job.
+
+## [3.5.0] - 2025-07-29
+
+### Added
+- Loading KTX/Basis from [NativeArray&lt;byte&gt;.ReadOnly](xref:Unity.Collections.NativeArray`1.ReadOnly). This makes it easier to load KTX data from existing, native memory directly without the need to create a copy in managed memory (e.g. by using [DownloadHandler.GetNativeData](xref:UnityEngine.Networking.DownloadHandler.GetNativeData) or [ConvertExistingDataToNativeArray](xref:Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray(System.Void*,System.Int32,Unity.Collections.Allocator))).
+  - [TextureBase.LoadFromBytes](xref:KtxUnity.TextureBase.LoadFromBytes(Unity.Collections.NativeArray{System.Byte}.ReadOnly,System.Boolean,System.UInt32,System.UInt32,System.UInt32,System.Boolean))
+  - [TextureBase.Open](xref:KtxUnity.TextureBase.Open(Unity.Collections.NativeArray{System.Byte}.ReadOnly))
+- Test project `KtxText`
+- (CI) Automatically generated CI jobs (via Wrench/RecipeEngine; required for PackageWorks).
+- (CI) Improved code format check reporting.
+- Unit tests for KTX/Basis editor importers.
+- Unit tests for [BasisUniversalTexture](xref:KtxUnity.BasisUniversalTexture).
+- (Test) Package coherence tests.
+
+### Changed
+- (Performance) KTX is not copied to managed memory anymore when using [LoadFromUrl](xref:KtxUnity.TextureBase.LoadFromUrl*) or [LoadFromStreamingAssets](xref:KtxUnity.TextureBase.LoadFromStreamingAssets*).
+- Changed source code repository structure to [monorepo](https://en.wikipedia.org/wiki/Monorepo).
+- Separated unit tests into dedicated tests package.
+- Bumped minimum required Unity version to 2021.3.46f1
+- Updated binaries to version [1.5.0](https://github.com/Unity-Technologies/ktx-plugin/releases/tag/release-github%2F1.5.0) (contains KTX-Software 4.4.0).
+- Updated Linux binaries (only) to version [1.5.1](https://github.com/Unity-Technologies/ktx-plugin/releases/tag/release-github%2F1.5.1) (to maintain compatibility with Ubuntu 20.04).
+
+### Deprecated
+- Loading KTX/Basis from [NativeSlice<byte>](xref:Unity.Collections.NativeSlice`1) (please use [NativeArray&lt;byte&gt;.ReadOnly](xref:Unity.Collections.NativeArray`1.ReadOnly) overloads; see above).
+
+### Fixed
+- Proper exception is thrown when loading from a [NativeSlice<byte>](xref:Unity.Collections.NativeSlice`1) with a stride other than 1.
+- Copyright owner of *Basis Universal Transcoder* set to *Binomial LLC* in `Third Party Notices.md`.
+- Test instability due to unreleased memory.
+- Android binaries are now 16kB page size compatible (fixes [#98](https://github.com/atteneder/KtxUnity/issues/98))
+
+### Deprecated
+- `KtxTestCaseAttribute`, which was `public` by accident.
+
 ## [3.4.5] - 2024-10-07
 
 ### Added
