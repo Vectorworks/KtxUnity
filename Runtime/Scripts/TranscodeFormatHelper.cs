@@ -58,6 +58,12 @@ namespace KtxUnity
             this.format = format;
             this.transcodeFormat = transcodeFormat;
         }
+#if DEBUG
+        public override string ToString()
+        {
+            return $"{nameof(TranscodeFormatTuple)} {nameof(GraphicsFormat)}.{format} {nameof(TranscodeFormat)}.{transcodeFormat}";
+        }
+#endif
     }
 
     struct FormatInfo
@@ -106,22 +112,17 @@ namespace KtxUnity
 
                 s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare,
-#if UNITY_2018_3_OR_NEWER
                     GraphicsFormat.RGBA_DXT1_SRGB,
-#else
-                    GraphicsFormat.RGB_DXT1_SRGB,
-#endif
                     TranscodeFormat.BC1_RGB));
 
                 s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonPowerOfTwo | TextureFeatures.NonSquare | TextureFeatures.Linear,
-#if UNITY_2018_3_OR_NEWER
                     GraphicsFormat.RGBA_DXT1_UNorm,
-#else
-                    GraphicsFormat.RGB_DXT1_UNorm,
-#endif
                     TranscodeFormat.BC1_RGB));
 
+                // PVRTC GraphicsFormats are obsolete since Unity 6.1.
+                // For now, we keep them for compatibility.
+#pragma warning disable CS0618 // Type or member is obsolete
                 s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.NonMultipleOfFour,
                     GraphicsFormat.RGB_PVRTC_4Bpp_SRGB,
@@ -131,6 +132,7 @@ namespace KtxUnity
                     TextureFeatures.NonMultipleOfFour,
                     GraphicsFormat.RGB_PVRTC_4Bpp_UNorm,
                     TranscodeFormat.PVRTC1_4_RGB));
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 // Compressed with alpha channel
                 s_AllFormats.Add(new FormatInfo(
@@ -173,6 +175,9 @@ namespace KtxUnity
                     GraphicsFormat.RGBA_DXT5_UNorm,
                     TranscodeFormat.BC3_RGBA));
 
+                // PVRTC GraphicsFormats are obsolete since Unity 6.1.
+                // For now, we keep them for compatibility.
+#pragma warning disable CS0618 // Type or member is obsolete
                 s_AllFormats.Add(new FormatInfo(
                     TextureFeatures.AlphaChannel | TextureFeatures.NonMultipleOfFour,
                     GraphicsFormat.RGBA_PVRTC_4Bpp_SRGB,
@@ -182,6 +187,7 @@ namespace KtxUnity
                     TextureFeatures.AlphaChannel | TextureFeatures.Linear | TextureFeatures.NonMultipleOfFour,
                     GraphicsFormat.RGBA_PVRTC_4Bpp_UNorm,
                     TranscodeFormat.PVRTC1_4_RGBA));
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 // Uncompressed
                 s_AllFormats.Add(new FormatInfo(
@@ -405,9 +411,7 @@ namespace KtxUnity
                     tf = TranscodeFormat.RGBA4444;
                     break;
                 case GraphicsFormat.RGBA_ASTC4X4_SRGB:
-#if UNITY_2020_2_OR_NEWER
                 case GraphicsFormat.RGBA_ASTC4X4_UFloat:
-#endif
                 case GraphicsFormat.RGBA_ASTC4X4_UNorm:
                     tf = TranscodeFormat.ASTC_4x4_RGBA;
                     break;
@@ -415,6 +419,9 @@ namespace KtxUnity
                 case GraphicsFormat.RGBA_ETC2_UNorm:
                     tf = TranscodeFormat.ETC2_RGBA;
                     break;
+                // PVRTC GraphicsFormats are obsolete since Unity 6.1.
+                // For now, we keep them for compatibility.
+#pragma warning disable CS0618 // Type or member is obsolete
                 case GraphicsFormat.RGBA_PVRTC_4Bpp_SRGB:
                 case GraphicsFormat.RGBA_PVRTC_4Bpp_UNorm:
                     tf = TranscodeFormat.PVRTC1_4_RGBA;
@@ -423,6 +430,7 @@ namespace KtxUnity
                 case GraphicsFormat.RGB_PVRTC_4Bpp_UNorm:
                     tf = TranscodeFormat.PVRTC1_4_RGB;
                     break;
+#pragma warning restore CS0618 // Type or member is obsolete
                 case GraphicsFormat.R_EAC_SNorm:
                 case GraphicsFormat.R_EAC_UNorm:
                     tf = TranscodeFormat.ETC2_EAC_R11;
@@ -454,6 +462,17 @@ namespace KtxUnity
 #endif
             );
         }
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticsOnLoad()
+        {
+            // Reset caches
+            s_Initialized = false;
+            s_FormatCache = null;
+            s_AllFormats = null;
+        }
+#endif
 
 #if KTX_VERBOSE
         // ReSharper disable Unity.PerformanceAnalysis

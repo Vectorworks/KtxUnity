@@ -61,6 +61,10 @@ namespace KtxUnity
         /// Face slice exceeds base depth.
         /// </summary>
         InvalidSlice,
+        /// <summary>
+        /// Texture is in invalid state. Consult low-level API documentation.
+        /// </summary>
+        InvalidState,
     }
 
 
@@ -81,10 +85,11 @@ namespace KtxUnity
             { ErrorCode.OpenUriFailed, "Loading URI failed" },
             { ErrorCode.LoadingFailed, "Loading failed" },
             { ErrorCode.TranscodeFailed, "Transcoding failed" },
-            { ErrorCode.InvalidLayer, "Invalid ImageIndex" },
-            { ErrorCode.InvalidLevel, "Invalid MipMapLevel" },
-            { ErrorCode.InvalidFace, "Invalid Face" },
-            { ErrorCode.InvalidSlice, "Invalid Slice" },
+            { ErrorCode.InvalidLayer, "Invalid layer" },
+            { ErrorCode.InvalidLevel, "Invalid mipmap level" },
+            { ErrorCode.InvalidFace, "Invalid face" },
+            { ErrorCode.InvalidSlice, "Invalid slice" },
+            { ErrorCode.InvalidState, "Texture is in invalid state. Consult low-level API documentation." },
         };
 
         /// <summary>

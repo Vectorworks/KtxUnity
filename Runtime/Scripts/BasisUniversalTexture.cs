@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: 2023 Unity Technologies and the KTX for Unity authors
 // SPDX-License-Identifier: Apache-2.0
 
-
+using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Profiling;
 using Unity.Collections;
+using UnityEngine.Assertions;
 
 namespace KtxUnity
 {
@@ -16,17 +17,25 @@ namespace KtxUnity
     public class BasisUniversalTexture : TextureBase
     {
 
-        NativeSlice<byte> m_InputData;
+        NativeArray<byte>.ReadOnly m_InputData;
         NativeArray<byte> m_TextureData;
         MetaData m_MetaData;
         TextureOrientation m_Orientation;
 
         /// <inheritdoc />
-        public override ErrorCode Open(NativeSlice<byte> data)
+        public override ErrorCode Open(NativeArray<byte>.ReadOnly data)
         {
             KtxNativeInstance.CertifySupportedPlatform();
             m_InputData = data;
             return ErrorCode.Success;
+        }
+
+        /// <inheritdoc />
+        [Obsolete("Use the overload that accepts a NativeArray<byte>.ReadOnly data")]
+        public override ErrorCode Open(NativeSlice<byte> data)
+        {
+            using var array = data.AsNativeArray();
+            return Open(array.AsReadOnly());
         }
 
         /// <inheritdoc />
@@ -38,13 +47,20 @@ namespace KtxUnity
             bool mipChain = true
         )
         {
-            KtxNativeInstance.CertifySupportedPlatform();
             return await LoadTexture2DInternal(
                 linear,
                 layer,
                 0,
                 mipLevel,
-                mipChain);
+                mipChain,
+#if UNITY_VISIONOS
+                // PolySpatial visionOS needs to be able to access raw texture data in order to
+                // do the material/texture conversion.
+                readable: true
+#else
+                readable: false
+#endif
+                );
         }
 
         /// <inheritdoc />
@@ -56,21 +72,31 @@ namespace KtxUnity
             bool mipChain = true
         )
         {
-            KtxNativeInstance.CertifySupportedPlatform();
             return await LoadTexture2DInternal(
                 true,
                 layer,
                 0,
                 mipLevel,
                 mipChain,
-                targetFormat);
+                targetFormat,
+#if UNITY_VISIONOS
+                // PolySpatial visionOS needs to be able to access raw texture data in order to
+                // do the material/texture conversion.
+                readable: true
+#else
+                readable: false
+#endif
+                );
         }
 
         /// <inheritdoc />
-        public override void Dispose() { }
+        public override void Dispose()
+        {
+            m_InputData = default;
+        }
 
         internal async Task<TextureResult> LoadFromBytesInternal(
-            NativeSlice<byte> data,
+            NativeArray<byte>.ReadOnly data,
             bool linear = false,
             uint layer = 0,
             uint faceSlice = 0,
@@ -79,20 +105,40 @@ namespace KtxUnity
         )
         {
             m_InputData = data;
-            var result = await LoadTexture2DInternal(linear, layer, faceSlice, mipLevel, mipChain);
+            var result = await LoadTexture2DInternal(
+                linear,
+                layer,
+                faceSlice,
+                mipLevel,
+                mipChain,
+#if UNITY_VISIONOS
+                // PolySpatial visionOS needs to be able to access raw texture data in order to
+                // do the material/texture conversion.
+                readable: true
+#else
+                readable: false
+#endif
+                );
             Dispose();
             return result;
         }
 
-        async Task<TextureResult> LoadTexture2DInternal(
+        /// <inheritdoc />
+        protected override async Task<TextureResult> LoadTexture2DInternal(
             bool linear = false,
             uint layer = 0,
             uint faceSlice = 0,
             uint mipLevel = 0,
             bool mipChain = true,
-            GraphicsFormat? targetFormat = null
+            GraphicsFormat? targetFormat = null,
+            bool readable = false
         )
         {
+            if (!m_InputData.IsCreated)
+            {
+                return new TextureResult(ErrorCode.InvalidState);
+            }
+
             var transcoder = BasisUniversal.GetTranscoderInstance();
 
             while (transcoder == null)
@@ -170,7 +216,10 @@ namespace KtxUnity
 #endif
 
             result.texture.LoadRawTextureData(m_TextureData);
-            result.texture.Apply(false, true);
+            result.texture.Apply(
+                false,
+                !readable
+                );
             m_TextureData.Dispose();
             Profiler.EndSample();
             return result;
